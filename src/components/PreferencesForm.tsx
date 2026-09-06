@@ -371,7 +371,7 @@ export default function PreferencesForm({
                     </h2>
                 </div>
                 <p className="text-[12px] text-[#434655] mb-4">
-                    Get notified about status changes and deadlines
+                    Get notified about new postings
                 </p>
                 <div className="flex items-center gap-3">
                     <button
