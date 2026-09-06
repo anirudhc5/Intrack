@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Application, ALL_CATEGORIES, ALL_STATUSES, RoleCategory, ApplicationStatus, CATEGORY_CONFIG } from '@/lib/types'
+import { Application, ALL_CATEGORIES, ALL_STATUSES, RoleCategory, ApplicationStatus, CATEGORY_CONFIG, STATUS_CONFIG } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
@@ -11,9 +11,18 @@ interface AddApplicationModalProps {
   onClose: () => void
   onSaved: () => void
   editingApplication?: Application
+  prefillFromPosting?: {
+    posting_id?: string
+    company?: string
+    title?: string
+    location?: string | null
+    salary_text?: string | null
+    url?: string | null
+    categories?: RoleCategory[]
+  } | null
 }
 
-export default function AddApplicationModal({ isOpen, onClose, onSaved, editingApplication }: AddApplicationModalProps) {
+export default function AddApplicationModal({ isOpen, onClose, onSaved, editingApplication, prefillFromPosting }: AddApplicationModalProps) {
   const [loading, setLoading] = useState(false)
   
   const [companyName, setCompanyName] = useState('')
@@ -21,6 +30,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
   const [location, setLocation] = useState('')
   const [salaryText, setSalaryText] = useState('')
   const [url, setUrl] = useState('')
+  const [jd_text, setJdText] = useState('')
   const [categories, setCategories] = useState<RoleCategory[]>([])
   const [status, setStatus] = useState<ApplicationStatus>('applied')
   const [statusDetail, setStatusDetail] = useState('')
@@ -29,21 +39,34 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
   useEffect(() => {
     if (isOpen) {
       if (editingApplication) {
-        setCompanyName(editingApplication.company_name || '')
-        setRoleTitle(editingApplication.role_title || '')
+        setCompanyName(editingApplication.company || '')
+        setRoleTitle(editingApplication.title || '')
         setLocation(editingApplication.location || '')
         setSalaryText(editingApplication.salary_text || '')
         setUrl(editingApplication.url || '')
+        setJdText(editingApplication.jd_text || '')
         setCategories(editingApplication.categories || [])
         setStatus(editingApplication.status || 'applied')
         setStatusDetail(editingApplication.status_detail || '')
         setNotes(editingApplication.notes || '')
+      } else if (prefillFromPosting) {
+        setCompanyName(prefillFromPosting.company || '')
+        setRoleTitle(prefillFromPosting.title || '')
+        setLocation(prefillFromPosting.location || '')
+        setSalaryText(prefillFromPosting.salary_text || '')
+        setUrl(prefillFromPosting.url || '')
+        setJdText('')
+        setCategories(prefillFromPosting.categories || [])
+        setStatus('applied')
+        setStatusDetail('')
+        setNotes('')
       } else {
         setCompanyName('')
         setRoleTitle('')
         setLocation('')
         setSalaryText('')
         setUrl('')
+        setJdText('')
         setCategories([])
         setStatus('applied')
         setStatusDetail('')
@@ -86,11 +109,13 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
 
     const payload = {
       user_id: userId,
-      company_name: companyName,
-      role_title: roleTitle,
+      posting_id: editingApplication?.posting_id || prefillFromPosting?.posting_id || null,
+      company: companyName,
+      title: roleTitle,
       location: location || null,
       salary_text: salaryText || null,
       url: url || null,
+      jd_text: jd_text || null,
       status,
       status_detail: statusDetail || null,
       categories,
@@ -184,6 +209,15 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
             />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700">Job Description</label>
+            <textarea
+              value={jd_text} onChange={e => setJdText(e.target.value)}
+              className="w-full p-3 rounded-lg bg-white border border-[#c3c6d7] focus:ring-2 focus:ring-blue-500/20 min-h-[100px] text-sm"
+              placeholder="Paste the job description here..."
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Categories</label>
             <div className="flex flex-wrap gap-2">
@@ -200,7 +234,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
                         : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    {cat}
+                    {config.label}
                   </button>
                 )
               })}
@@ -215,7 +249,7 @@ export default function AddApplicationModal({ isOpen, onClose, onSaved, editingA
                 className="w-full h-9 px-3 rounded-lg bg-white border border-[#c3c6d7] focus:ring-2 focus:ring-blue-500/20 text-sm"
               >
                 {ALL_STATUSES.map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>
                 ))}
               </select>
             </div>

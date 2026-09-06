@@ -19,7 +19,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from 'recharts'
 
 interface PreferencesFormProps {
@@ -37,7 +36,6 @@ export default function PreferencesForm({ preferences, postings, userId }: Prefe
   )
   const [weeklyGoal, setWeeklyGoal] = useState(preferences?.weekly_goal ?? 6)
   const [notifyEmail, setNotifyEmail] = useState(preferences?.notify_email ?? true)
-  const [minSalary, setMinSalary] = useState<number | null>(preferences?.min_salary ?? null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -57,8 +55,6 @@ export default function PreferencesForm({ preferences, postings, userId }: Prefe
         categories,
         notify_email: notifyEmail,
         weekly_goal: weeklyGoal,
-        min_salary: minSalary,
-        updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }
     )
@@ -115,7 +111,7 @@ export default function PreferencesForm({ preferences, postings, userId }: Prefe
                     : 'bg-white text-[#434655] border-[#c3c6d7] hover:bg-[#f2f3ff]'
                 }`}
               >
-                {cat}
+                {config?.label || cat}
               </button>
             )
           })}
@@ -185,30 +181,6 @@ export default function PreferencesForm({ preferences, postings, userId }: Prefe
         </div>
       </section>
 
-      {/* Alert Threshold */}
-      <section className="bg-white rounded-xl p-6 shadow-sm border border-[#e2e8f0]">
-        <div className="flex items-center gap-2 mb-1">
-          <DollarSign className="w-4 h-4 text-[#059669]" />
-          <h2 className="text-[15px] font-semibold text-[#131b2e]">Alert Threshold</h2>
-        </div>
-        <p className="text-[12px] text-[#434655] mb-4">
-          Only receive instant alerts for postings meeting your minimum compensation. Matching is deterministic — no AI scoring.
-        </p>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] text-sm">$</span>
-            <input
-              type="number"
-              value={minSalary ?? ''}
-              onChange={(e) => setMinSalary(e.target.value ? Number(e.target.value) : null)}
-              placeholder="e.g. 60000"
-              className="h-9 pl-7 pr-3 w-40 rounded-lg bg-white border border-[#c3c6d7] text-[13px] text-[#131b2e] focus:ring-2 focus:ring-blue-500/20 focus:border-[#2563eb] outline-none"
-            />
-          </div>
-          <span className="text-[13px] text-[#434655]">annualized minimum</span>
-        </div>
-      </section>
-
       {/* Salary Distribution */}
       <section className="bg-white rounded-xl p-6 shadow-sm border border-[#e2e8f0]">
         <h2 className="text-[15px] font-semibold text-[#131b2e] mb-1">Market Salary Distribution</h2>
@@ -246,20 +218,6 @@ export default function PreferencesForm({ preferences, postings, userId }: Prefe
                   }}
                 />
                 <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                {minSalary !== null && (
-                  <ReferenceLine
-                    x={findBucketForValue(salaryBuckets, minSalary)}
-                    stroke="#e11d48"
-                    strokeDasharray="5 5"
-                    strokeWidth={2}
-                    label={{
-                      value: 'Your threshold',
-                      position: 'top',
-                      fill: '#e11d48',
-                      fontSize: 10,
-                    }}
-                  />
-                )}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -320,9 +278,4 @@ function formatSalaryK(value: number): string {
     return `${Math.round(value / 1000)}k`
   }
   return `${Math.round(value)}`
-}
-
-function findBucketForValue(buckets: { label: string; min: number; max: number }[], value: number): string | undefined {
-  const bucket = buckets.find((b) => value >= b.min && value < b.max)
-  return bucket?.label || buckets[buckets.length - 1]?.label
 }

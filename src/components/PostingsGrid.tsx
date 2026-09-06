@@ -44,8 +44,8 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
       // Filter by search
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase()
-        const matchesCompany = posting.company_name.toLowerCase().includes(query)
-        const matchesRole = posting.role_title.toLowerCase().includes(query)
+        const matchesCompany = posting.company.toLowerCase().includes(query)
+        const matchesRole = posting.title.toLowerCase().includes(query)
         if (!matchesCompany && !matchesRole) return false
       }
 
@@ -69,7 +69,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
       'bg-pink-100 text-pink-700',
       'bg-indigo-100 text-indigo-700',
     ]
-    const hash = companyName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const hash = companyName.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
     return colors[hash % colors.length]
   }
 
@@ -107,7 +107,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                     : 'bg-white text-[#434655] border-[#c3c6d7] hover:bg-slate-50'
                 }`}
               >
-                {cat}
+                {config?.label || cat}
               </button>
             )
           })}
@@ -135,17 +135,17 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                 <div className="flex items-start gap-3 flex-1 overflow-hidden">
                   <div
                     className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${getCompanyColor(
-                      posting.company_name
+                      posting.company
                     )}`}
                   >
-                    {posting.company_name.charAt(0).toUpperCase()}
+                    {posting.company.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col flex-1 min-w-0">
-                    <h3 className="font-medium text-on-surface truncate" title={posting.role_title}>
-                      {posting.role_title}
+                    <h3 className="font-medium text-on-surface truncate" title={posting.title}>
+                      {posting.title}
                     </h3>
                     <div className="text-xs text-on-surface-variant truncate">
-                      {posting.company_name}
+                      {posting.company}
                       {posting.location && <span className="mx-1">•</span>}
                       {posting.location && <span>{posting.location}</span>}
                     </div>
@@ -173,7 +173,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                       key={cat}
                       className={`text-[10px] px-2 py-0.5 rounded font-medium border ${config.bgColor} ${config.color} ${config.borderColor}`}
                     >
-                      {cat}
+                      {config?.label || cat}
                     </span>
                   )
                 })}
@@ -192,8 +192,8 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                   onClick={() => {
                     setPrefillPosting({
                       posting_id: posting.id,
-                      company_name: posting.company_name,
-                      role_title: posting.role_title,
+                      company: posting.company,
+                      title: posting.title,
                       location: posting.location,
                       salary_text: posting.salary_text,
                       url: posting.url,

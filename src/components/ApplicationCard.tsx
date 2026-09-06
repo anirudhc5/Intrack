@@ -17,9 +17,9 @@ export default function ApplicationCard({ application, onEdit }: ApplicationCard
   
   // simple hash for company color
   const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500']
-  const hash = application.company_name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const hash = application.company.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
   const avatarColor = colors[hash % colors.length]
-  const initial = application.company_name.charAt(0).toUpperCase()
+  const initial = application.company.charAt(0).toUpperCase()
 
   const handleDelete = async () => {
     const supabase = createClient()
@@ -38,9 +38,9 @@ export default function ApplicationCard({ application, onEdit }: ApplicationCard
             {initial}
           </div>
           <div>
-            <h3 className="font-medium text-[#131b2e] truncate max-w-[150px]">{application.role_title}</h3>
+            <h3 className="font-medium text-[#131b2e] truncate max-w-[150px]">{application.title}</h3>
             <p className="text-sm text-[#434655] truncate max-w-[150px]">
-              {application.company_name} {application.location ? `• ${application.location}` : ''}
+              {application.company} {application.location ? `• ${application.location}` : ''}
             </p>
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function ApplicationCard({ application, onEdit }: ApplicationCard
           const config = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG['Other']
           return (
             <span key={cat} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.color} border ${config.borderColor}`}>
-              {cat}
+              {config.label}
             </span>
           )
         })}

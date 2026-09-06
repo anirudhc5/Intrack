@@ -6,7 +6,7 @@ import {
   LineChart, Line, Legend, PieChart, Pie, Cell
 } from 'recharts'
 import { BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { Application, StatusHistoryEntry, UserPreferences, STATUS_CONFIG, CATEGORY_CONFIG, isGhosted } from '@/lib/types'
+import { Application, StatusHistoryEntry, UserPreferences, STATUS_CONFIG, CATEGORY_CONFIG, isGhosted, RoleCategory, ApplicationStatus } from '@/lib/types'
 
 interface PipelineChartsProps {
   applications: Application[]
@@ -39,7 +39,7 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
   const offerApps = applications.filter(app => ['offer', 'accepted'].includes(app.status))
   const offerRate = totalApps > 0 ? (offerApps.length / totalApps) * 100 : 0
 
-  const activePipelineApps = applications.filter(app => ['oa', 'interviewing'].includes(app.status))
+  const activePipelineApps = applications.filter(app => ['oa', 'interview_1', 'interview_2', 'interview_3+'].includes(app.status))
   
   // Response rate comparison
   const now = new Date()
@@ -68,18 +68,20 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
   const rrDiff = rrThisMonth - rrLastMonth
 
   // --- Pipeline Funnel Data ---
-  const funnelOrder = ['saved', 'applied', 'oa', 'interviewing', 'offer', 'accepted', 'rejected']
+  const funnelOrder: ApplicationStatus[] = ['saved', 'applied', 'oa', 'interview_1', 'interview_2', 'interview_3+', 'offer', 'accepted', 'rejected']
   
   // Need actual hex colors for Recharts
-  const STATUS_COLORS: Record<string, string> = {
+  const STATUS_COLORS: Record<ApplicationStatus, string> = {
     saved: '#64748b',
     applied: '#64748b',
     oa: '#7c3aed',
-    interviewing: '#2563eb',
+    interview_1: '#2563eb',
+    interview_2: '#2563eb',
+    'interview_3+': '#2563eb',
     offer: '#059669',
-    rejected: '#e11d48',
-    withdrawn: '#64748b',
     accepted: '#059669',
+    rejected: '#e11d48',
+    withdrawn: '#94a3b8',
   }
 
   const funnelData = useMemo(() => {
@@ -93,7 +95,7 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
       }
 
       return {
-        name: STATUS_CONFIG[status as keyof typeof STATUS_CONFIG].label,
+        name: STATUS_CONFIG[status]?.label || status,
         status: status,
         count: count - ghostedCount,
         ghosted: ghostedCount,
@@ -101,15 +103,15 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
     })
   }, [applications, funnelOrder])
 
-  const CATEGORY_COLORS: Record<string, string> = {
-    'SWE': '#1d4ed8', // blue-700
-    'MLE/AI': '#6b21a8', // purple-800
-    'Data Science': '#0f766e', // teal-700
-    'PM': '#c2410c', // orange-700
-    'Quant': '#047857', // emerald-700
-    'Hardware': '#b91c1c', // red-700
-    'Design': '#be185d', // pink-700
-    'Other': '#334155', // slate-700
+  const CATEGORY_COLORS: Record<RoleCategory, string> = {
+    SWE: '#1d4ed8', // blue-700
+    MLE_AI: '#6b21a8', // purple-800
+    Data_Science: '#0f766e', // teal-700
+    PM: '#c2410c', // orange-700
+    Quant: '#047857', // emerald-700
+    Hardware: '#b91c1c', // red-700
+    Design: '#be185d', // pink-700
+    Other: '#334155', // slate-700
   }
 
   // --- Velocity Over Time ---
@@ -143,16 +145,17 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
 
   // --- Category Distribution ---
   const categoryData = useMemo(() => {
-    const counts: Record<string, number> = {}
+    const counts: Partial<Record<RoleCategory, number>> = {}
     applications.forEach(app => {
-      app.categories.forEach(cat => {
+      app.categories?.forEach(cat => {
         counts[cat] = (counts[cat] || 0) + 1
       })
     })
     
-    return Object.entries(counts).map(([name, value]) => ({
-      name,
-      value
+    return Object.entries(counts).map(([cat, value]) => ({
+      category: cat as RoleCategory,
+      name: CATEGORY_CONFIG[cat as RoleCategory]?.label || cat,
+      value: value || 0
     })).sort((a, b) => b.value - a.value)
   }, [applications])
 
@@ -257,7 +260,7 @@ export function PipelineCharts({ applications, statusHistory, userPreferences }:
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name as keyof typeof CATEGORY_COLORS] || '#334155'} />
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category] || '#334155'} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />

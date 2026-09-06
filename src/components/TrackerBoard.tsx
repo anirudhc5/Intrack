@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Application, ALL_CATEGORIES, RoleCategory, STATUS_CONFIG, ALL_STATUSES } from '@/lib/types'
+import { Application, ALL_CATEGORIES, RoleCategory, STATUS_CONFIG, ALL_STATUSES, CATEGORY_CONFIG } from '@/lib/types'
 import ApplicationCard from './ApplicationCard'
 import AddApplicationModal from './AddApplicationModal'
 import { Plus, Search } from 'lucide-react'
@@ -16,8 +16,8 @@ export default function TrackerBoard({ applications }: { applications: Applicati
 
   const filteredApps = applications.filter(app => {
     const matchesSearch = search === '' || 
-      app.company_name.toLowerCase().includes(search.toLowerCase()) || 
-      app.role_title.toLowerCase().includes(search.toLowerCase())
+      app.company.toLowerCase().includes(search.toLowerCase()) || 
+      app.title.toLowerCase().includes(search.toLowerCase())
       
     const matchesCategory = selectedCategory === 'All' || app.categories.includes(selectedCategory)
     
@@ -84,7 +84,7 @@ export default function TrackerBoard({ applications }: { applications: Applicati
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                {cat}
+                {CATEGORY_CONFIG[cat]?.label || cat}
               </button>
             ))}
           </div>
