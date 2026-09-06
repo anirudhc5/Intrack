@@ -225,6 +225,46 @@ export const ALL_CATEGORIES: RoleCategory[] = [
     "Other",
 ];
 
+// Linear pipeline order for correction/undo logic.
+// rejected/withdrawn are terminal exits, not part of the forward scale —
+// they're intentionally excluded so a rejection is never auto-trimmed.
+export const STATUS_ORDER: Partial<Record<ApplicationStatus, number>> = {
+  saved: 0,
+  applied: 1,
+  oa: 2,
+  interview_1: 3,
+  interview_2: 4,
+  "interview_3+": 5,
+  offer: 6,
+  accepted: 7,
+};
+
+/**
+ * When correcting to an earlier (or same) stage, drop every trailing
+ * history entry that's at or past the corrected stage's rank, so a
+ * mistaken OA/interview entry doesn't linger once you've backed out of it.
+ * Statuses outside STATUS_ORDER (rejected, withdrawn) are left untouched —
+ * they're exits, not points on the scale, so no trimming applies to them.
+ */
+export function trimHistoryForCorrection(
+  history: StatusHistoryEntry[],
+  newStatus: ApplicationStatus,
+): StatusHistoryEntry[] {
+  const newRank = STATUS_ORDER[newStatus];
+  if (newRank === undefined) return history;
+
+  const trimmed = [...history];
+  while (trimmed.length > 0) {
+    const lastRank = STATUS_ORDER[trimmed[trimmed.length - 1].status];
+    if (lastRank !== undefined && lastRank >= newRank) {
+      trimmed.pop();
+    } else {
+      break;
+    }
+  }
+  return trimmed;
+}
+
 /**
  * Format status for display: "Stage — detail"
  */

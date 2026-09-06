@@ -9,6 +9,7 @@ import {
     ApplicationStatus,
     CATEGORY_CONFIG,
     STATUS_CONFIG,
+    trimHistoryForCorrection,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -140,17 +141,19 @@ export default function AddApplicationModal({
         };
 
         if (editingApplication) {
-            const statusChanged = editingApplication.status !== status;
+            const statusChanged = editingApplication.status !== status
+            const history = editingApplication.status_history ?? []
+
             const newHistory = statusChanged
-                ? [
-                      ...(editingApplication.status_history ?? []),
-                      {
-                          status,
-                          status_detail: statusDetail || null,
-                          changed_at: new Date().toISOString(),
-                      },
-                  ]
-                : editingApplication.status_history;
+              ? [
+                  ...trimHistoryForCorrection(history, status),
+                  {
+                    status,
+                    status_detail: statusDetail || null,
+                    changed_at: new Date().toISOString(),
+                  },
+                ]
+              : history
 
             const { error } = await supabase
                 .from("applications")
