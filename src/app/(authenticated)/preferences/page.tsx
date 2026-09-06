@@ -26,6 +26,7 @@ export default async function PreferencesPage() {
           preferences={preferences} 
           postings={postings}
           userId={user.id}
+          user={user}
         />
       </div>
     </div>

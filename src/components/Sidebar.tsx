@@ -31,6 +31,9 @@ export default function Sidebar({ user }: { user: any }) {
         { name: "Preferences", href: "/preferences", icon: Settings },
     ];
 
+    const avatarUrl =
+        user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+
     return (
         <aside className="fixed left-0 top-0 w-64 h-full bg-white border-r border-[#c3c6d7]/30 flex flex-col">
             <div className="p-6">
@@ -90,9 +93,22 @@ export default function Sidebar({ user }: { user: any }) {
 
             <div className="mt-auto p-4 border-t border-[#c3c6d7]/30">
                 <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="w-8 h-8 rounded-full bg-[#eaedff] flex items-center justify-center text-[#2563eb] font-semibold text-sm">
-                        {user?.email?.charAt(0).toUpperCase() || (
-                            <User className="w-4 h-4" />
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#eaedff] flex-shrink-0 flex items-center justify-center text-[#2563eb] font-semibold text-sm">
+                        {avatarUrl ? (
+                            <Image
+                                src={avatarUrl}
+                                alt={
+                                    user?.user_metadata?.name || "User profile"
+                                }
+                                fill
+                                sizes="32px"
+                                className="object-cover"
+                                referrerPolicy="no-referrer"
+                            />
+                        ) : (
+                            user?.email?.charAt(0).toUpperCase() || (
+                                <User className="w-4 h-4" />
+                            )
                         )}
                     </div>
                     <div className="flex-1 min-w-0">
