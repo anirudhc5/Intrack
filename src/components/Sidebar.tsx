@@ -37,21 +37,24 @@ export default function Sidebar({ user }: { user: any }) {
     return (
         <aside className="fixed left-0 top-0 w-64 h-full bg-white border-r border-[#c3c6d7]/30 flex flex-col">
             <div className="p-6">
-                <div className="flex items-center gap-3 mb-8">
-                    <Image
-                        src="/logo.svg"
-                        alt="Intrack Logo"
-                        width={32}
-                        height={32}
-                    />
-                    <div>
-                        <h1 className="text-xl font-semibold text-[#131b2e]">
-                            Intrack
-                        </h1>
-                        <p className="text-xs text-[#434655]">Candidate OS</p>
+                <Link href="/tracker">
+                    <div className="flex items-center gap-3 mb-8">
+                        <Image
+                            src="/logo.svg"
+                            alt="Intrack Logo"
+                            width={32}
+                            height={32}
+                        />
+                        <div>
+                            <h1 className="text-xl font-semibold text-[#131b2e]">
+                                Intrack
+                            </h1>
+                            <p className="text-xs text-[#434655]">
+                                Candidate OS
+                            </p>
+                        </div>
                     </div>
-                </div>
-
+                </Link>
                 <div className="relative mb-8">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#737686]" />
                     <input

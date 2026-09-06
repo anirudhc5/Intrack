@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, {
+    useMemo,
+    useRef,
+    useEffect,
+    useState,
+    useCallback,
+} from "react";
+import { sankeyCircular, sankeyLeft } from "d3-sankey-circular";
+import type { SankeyGraph, SankeyNode, SankeyLink } from "d3-sankey-circular";
 import {
-    BarChart,
-    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -23,7 +29,6 @@ import {
     UserPreferences,
     STATUS_CONFIG,
     CATEGORY_CONFIG,
-    isGhosted,
     RoleCategory,
     ApplicationStatus,
 } from "@/lib/types";
@@ -112,20 +117,8 @@ export function PipelineCharts({
             : 0;
     const rrDiff = rrThisMonth - rrLastMonth;
 
-    // --- Pipeline Funnel Data ---
-    const funnelOrder: ApplicationStatus[] = [
-        "saved",
-        "applied",
-        "oa",
-        "interview_1",
-        "interview_2",
-        "interview_3+",
-        "offer",
-        "accepted",
-        "rejected",
-    ];
-
-    // Need actual hex colors for Recharts
+    // --- Sankey Diagram Data ---
+    // Need actual hex colors for SVG rendering
     const STATUS_COLORS: Record<ApplicationStatus, string> = {
         saved: "#64748b",
         applied: "#64748b",
@@ -139,28 +132,52 @@ export function PipelineCharts({
         withdrawn: "#94a3b8",
     };
 
-    const funnelData = useMemo(() => {
-        return funnelOrder.map((status) => {
-            const count = applications.filter(
-                (app) => app.status === status,
-            ).length;
+    const sankeyGraphData = useMemo(() => {
+        // Build edges from every consecutive pair in each application's status_history
+        const edgeCounts = new Map<string, number>();
+        const nodeSet = new Set<string>();
 
-            // Calculate ghosted for "applied"
-            let ghostedCount = 0;
-            if (status === "applied") {
-                ghostedCount = applications.filter(
-                    (app) => app.status === "applied" && isGhosted(app),
-                ).length;
+        applications.forEach((app) => {
+            const history = app.status_history;
+            if (!history || history.length === 0) return;
+
+            // Add each distinct status as a node
+            history.forEach((entry) => nodeSet.add(entry.status));
+
+            // Create edges from consecutive pairs (ignore self-loops)
+            for (let i = 0; i < history.length - 1; i++) {
+                const src = history[i].status;
+                const tgt = history[i + 1].status;
+                if (src === tgt) continue;
+                const key = `${src}→${tgt}`;
+                edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
             }
-
-            return {
-                name: STATUS_CONFIG[status]?.label || status,
-                status: status,
-                count: count - ghostedCount,
-                ghosted: ghostedCount,
-            };
         });
-    }, [applications, funnelOrder]);
+
+        // If no statuses at all, empty graph
+        if (nodeSet.size === 0) {
+            return { nodes: [], links: [], hasTransitions: false };
+        }
+
+        // Build node and link arrays for d3-sankey-circular
+        const nodeNames = Array.from(nodeSet);
+        const nodeIndexMap = new Map<string, number>();
+        nodeNames.forEach((name, i) => nodeIndexMap.set(name, i));
+
+        const nodes = nodeNames.map((name) => ({ name }));
+        const links: { source: string; target: string; value: number }[] = [];
+
+        edgeCounts.forEach((value, key) => {
+            const [src, tgt] = key.split("→");
+            links.push({ source: src, target: tgt, value });
+        });
+
+        return {
+            nodes,
+            links,
+            hasTransitions: links.length > 0,
+        };
+    }, [applications]);
 
     const CATEGORY_COLORS: Record<RoleCategory, string> = {
         SWE: "#1d4ed8", // blue-700
@@ -174,36 +191,66 @@ export function PipelineCharts({
     };
 
     // --- Velocity Over Time ---
+    // --- Velocity Over Time ---
     const velocityData = useMemo(() => {
         const data = [];
-        const currentDate = new Date();
+        const now = new Date();
+
+        const monthNames = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+        ];
+
         for (let i = 7; i >= 0; i--) {
-            const end = new Date(currentDate);
-            end.setDate(end.getDate() - i * 7);
+            // End boundary of this 7-day bucket
+            const windowEnd = new Date(now);
+            windowEnd.setDate(now.getDate() - i * 7);
+            windowEnd.setHours(23, 59, 59, 999);
 
-            const start = new Date(end);
-            start.setDate(start.getDate() - 7);
+            // Start boundary of this 7-day bucket
+            const windowStart = new Date(windowEnd);
+            windowStart.setDate(windowEnd.getDate() - 7);
+            windowStart.setHours(0, 0, 0, 0);
 
-            const monthNames = [
-                "Jan",
-                "Feb",
-                "Mar",
-                "Apr",
-                "May",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Oct",
-                "Nov",
-                "Dec",
-            ];
-            const weekLabel = `${monthNames[start.getMonth()]} ${start.getDate()}`;
+            // Label reflects the end date so the latest tick lands on Today
+            const isCurrentWeek = i === 0;
+            const weekLabel = isCurrentWeek
+                ? "Today"
+                : `${monthNames[windowEnd.getMonth()]} ${windowEnd.getDate()}`;
 
             const count = applications.filter((app) => {
-                if (!app.applied_at) return false;
-                const appliedDate = new Date(app.applied_at);
-                return appliedDate >= start && appliedDate < end;
+                // 1. Fall back to status_history or created_at if applied_at is missing
+                const dateStr =
+                    app.applied_at ||
+                    app.status_history?.find((h) => h.status === "applied")
+                        ?.changed_at ||
+                    (app as any).created_at;
+
+                if (!dateStr) return false;
+
+                // 2. Parse date safely regardless of format (YYYY-MM-DD vs ISO timestamp)
+                let appliedDate: Date;
+                if (
+                    typeof dateStr === "string" &&
+                    /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+                ) {
+                    const [y, m, d] = dateStr.split("-").map(Number);
+                    appliedDate = new Date(y, m - 1, d, 12, 0, 0); // Noon local time to avoid boundary issues
+                } else {
+                    appliedDate = new Date(dateStr);
+                }
+
+                return appliedDate >= windowStart && appliedDate <= windowEnd;
             }).length;
 
             data.push({
@@ -286,67 +333,13 @@ export function PipelineCharts({
             {/* Funnel Chart */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e2e8f0]">
                 <h3 className="text-[16px] font-medium text-[#131b2e] mb-6">
-                    Pipeline Funnel
+                    Sankey Diagram
                 </h3>
-                <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={funnelData}
-                            layout="vertical"
-                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                        >
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                                horizontal={true}
-                                vertical={false}
-                                stroke="#f2f3ff"
-                            />
-                            <XAxis
-                                type="number"
-                                tick={{ fill: "#434655", fontSize: 12 }}
-                            />
-                            <YAxis
-                                dataKey="name"
-                                type="category"
-                                tick={{ fill: "#434655", fontSize: 12 }}
-                                width={80}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    borderRadius: "8px",
-                                    border: "1px solid #e2e8f0",
-                                    fontSize: "12px",
-                                    color: "#131b2e",
-                                }}
-                            />
-                            <Bar dataKey="count" stackId="a" name="Active">
-                                {funnelData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={
-                                            STATUS_COLORS[
-                                                entry.status as keyof typeof STATUS_COLORS
-                                            ] || "#64748b"
-                                        }
-                                    />
-                                ))}
-                            </Bar>
-                            <Bar dataKey="ghosted" stackId="a" name="Ghosted">
-                                {funnelData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-ghost-${index}`}
-                                        fill={
-                                            STATUS_COLORS[
-                                                entry.status as keyof typeof STATUS_COLORS
-                                            ] || "#64748b"
-                                        }
-                                        fillOpacity={0.3}
-                                    />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <SankeyDiagram
+                    graphData={sankeyGraphData}
+                    statusColors={STATUS_COLORS}
+                    applications={applications}
+                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -462,6 +455,357 @@ export function PipelineCharts({
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// --- Sankey Diagram Sub-component ---
+
+interface SankeyDiagramProps {
+    graphData: {
+        nodes: { name: string }[];
+        links: {
+            source: string | number;
+            target: string | number;
+            value: number;
+        }[];
+        hasTransitions: boolean;
+    };
+    statusColors: Record<ApplicationStatus, string>;
+    applications: Application[];
+}
+
+function SankeyDiagram({
+    graphData,
+    statusColors,
+    applications,
+}: SankeyDiagramProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [hoveredLink, setHoveredLink] = useState<number | null>(null);
+    const [tooltip, setTooltip] = useState<{
+        x: number;
+        y: number;
+        source: string;
+        target: string;
+        value: number;
+    } | null>(null);
+
+    const chartHeight = 350;
+
+    // Measure the container width
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width } = entry.contentRect;
+                setDimensions({ width, height: chartHeight });
+            }
+        });
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, []);
+
+    // Compute Sankey layout
+    const sankeyResult = useMemo((): SankeyGraph | null => {
+        if (graphData.nodes.length === 0 || dimensions.width === 0) {
+            return null;
+        }
+
+        // If there are no transitions (single node, no links),
+        // we can't run the layout — handle this in rendering
+        if (!graphData.hasTransitions) {
+            return null;
+        }
+
+        try {
+            const layout = sankeyCircular()
+                .nodeId((d: { name: string }) => d.name)
+                .nodeAlign(sankeyLeft)
+                .nodeWidth(14)
+                .nodePadding(18)
+                .circularLinkGap(4)
+                .size([dimensions.width, chartHeight - 40]);
+
+            // Deep clone so the layout doesn't mutate our memoized input
+            const inputData = {
+                nodes: graphData.nodes.map((n) => ({ ...n })),
+                links: graphData.links.map((l) => ({ ...l })),
+            };
+
+            const result = layout(inputData);
+            return result;
+        } catch (err) {
+            console.error("Sankey layout error:", err);
+            return null;
+        }
+    }, [graphData, dimensions]);
+
+    const handleLinkMouseEnter = useCallback(
+        (e: React.MouseEvent, link: SankeyLink, idx: number) => {
+            setHoveredLink(idx);
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                setTooltip({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                    source: link.source.name,
+                    target: link.target.name,
+                    value: link.value,
+                });
+            }
+        },
+        [],
+    );
+
+    const handleLinkMouseMove = useCallback(
+        (e: React.MouseEvent) => {
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect && tooltip) {
+                setTooltip((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              x: e.clientX - rect.left,
+                              y: e.clientY - rect.top,
+                          }
+                        : null,
+                );
+            }
+        },
+        [tooltip],
+    );
+
+    const handleLinkMouseLeave = useCallback(() => {
+        setHoveredLink(null);
+        setTooltip(null);
+    }, []);
+
+    // --- Empty state: no nodes at all ---
+    if (graphData.nodes.length === 0) {
+        return (
+            <div className="h-[300px] flex items-center justify-center text-[#434655] text-[13px]">
+                <div className="text-center">
+                    <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No status transitions to display.</p>
+                    <p className="text-[11px] text-[#737686] mt-1">
+                        Transitions will appear as applications move through
+                        stages.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- Sparse state: single node with no transitions ---
+    if (!graphData.hasTransitions) {
+        const singleNode = graphData.nodes[0];
+        const label =
+            STATUS_CONFIG[singleNode.name as ApplicationStatus]?.label ||
+            singleNode.name;
+        const color =
+            statusColors[singleNode.name as ApplicationStatus] || "#64748b";
+
+        return (
+            <div
+                ref={containerRef}
+                className="relative"
+                style={{ height: chartHeight }}
+            >
+                <svg
+                    width={dimensions.width || "100%"}
+                    height={chartHeight}
+                    className="overflow-visible"
+                >
+                    {/* Single node rect, centered */}
+                    <rect
+                        x={(dimensions.width || 200) / 2 - 40}
+                        y={chartHeight / 2 - 20}
+                        width={80}
+                        height={40}
+                        rx={6}
+                        fill={color}
+                        opacity={0.85}
+                    />
+                    <text
+                        x={(dimensions.width || 200) / 2}
+                        y={chartHeight / 2 + 5}
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize={12}
+                        fontWeight={600}
+                    >
+                        {label}
+                    </text>
+                </svg>
+                <p className="text-center text-[11px] text-[#737686] mt-2">
+                    Only one status recorded — transitions will appear as
+                    applications progress.
+                </p>
+            </div>
+        );
+    }
+
+    // --- Layout computed: render full Sankey ---
+    return (
+        <div
+            ref={containerRef}
+            className="relative"
+            style={{ height: chartHeight }}
+        >
+            {dimensions.width > 0 && sankeyResult && (
+                <svg
+                    width={dimensions.width}
+                    height={chartHeight}
+                    className="overflow-visible"
+                >
+                    {/* Links */}
+                    <g>
+                        {sankeyResult.links.map(
+                            (link: SankeyLink, i: number) => {
+                                const sourceColor =
+                                    statusColors[
+                                        link.source.name as ApplicationStatus
+                                    ] || "#64748b";
+                                const isHovered = hoveredLink === i;
+
+                                return (
+                                    <path
+                                        key={`link-${i}`}
+                                        d={link.path}
+                                        fill="none"
+                                        stroke={sourceColor}
+                                        strokeWidth={Math.max(1, link.width)}
+                                        strokeOpacity={isHovered ? 0.7 : 0.25}
+                                        onMouseEnter={(e) =>
+                                            handleLinkMouseEnter(e, link, i)
+                                        }
+                                        onMouseMove={handleLinkMouseMove}
+                                        onMouseLeave={handleLinkMouseLeave}
+                                        style={{
+                                            cursor: "pointer",
+                                            transition: "stroke-opacity 150ms",
+                                        }}
+                                    />
+                                );
+                            },
+                        )}
+                    </g>
+
+                    {/* Nodes */}
+                    <g>
+                        {sankeyResult.nodes.map(
+                            (node: SankeyNode, i: number) => {
+                                const color =
+                                    statusColors[
+                                        node.name as ApplicationStatus
+                                    ] || "#64748b";
+                                const label =
+                                    STATUS_CONFIG[
+                                        node.name as ApplicationStatus
+                                    ]?.label || node.name;
+                                const nodeHeight = node.y1 - node.y0;
+                                const nodeWidth = node.x1 - node.x0;
+
+                                return (
+                                    <g key={`node-${i}`}>
+                                        <rect
+                                            x={node.x0}
+                                            y={node.y0}
+                                            width={nodeWidth}
+                                            height={Math.max(nodeHeight, 2)}
+                                            fill={color}
+                                            rx={2}
+                                            opacity={0.9}
+                                        />
+                                        {/* Label */}
+                                        <text
+                                            x={
+                                                node.x0 < dimensions.width / 2
+                                                    ? node.x1 + 6
+                                                    : node.x0 - 6
+                                            }
+                                            y={
+                                                node.y0 +
+                                                Math.max(nodeHeight, 2) / 2
+                                            }
+                                            textAnchor={
+                                                node.x0 < dimensions.width / 2
+                                                    ? "start"
+                                                    : "end"
+                                            }
+                                            dominantBaseline="central"
+                                            fill="#131b2e"
+                                            fontSize={11}
+                                            fontWeight={500}
+                                        >
+                                            {label}
+                                        </text>
+                                        {/* Value count */}
+                                        <text
+                                            x={
+                                                node.x0 < dimensions.width / 2
+                                                    ? node.x1 + 6
+                                                    : node.x0 - 6
+                                            }
+                                            y={
+                                                node.y0 +
+                                                Math.max(nodeHeight, 2) / 2 +
+                                                14
+                                            }
+                                            textAnchor={
+                                                node.x0 < dimensions.width / 2
+                                                    ? "start"
+                                                    : "end"
+                                            }
+                                            dominantBaseline="central"
+                                            fill="#737686"
+                                            fontSize={10}
+                                        >
+                                            {
+                                                applications.filter((app) =>
+                                                    app.status_history?.some(
+                                                        (h) =>
+                                                            h.status ===
+                                                            node.name,
+                                                    ),
+                                                ).length
+                                            }
+                                        </text>
+                                    </g>
+                                );
+                            },
+                        )}
+                    </g>
+                </svg>
+            )}
+
+            {/* Tooltip */}
+            {tooltip && (
+                <div
+                    className="absolute pointer-events-none z-10 bg-white border border-[#e2e8f0] rounded-lg px-3 py-2 shadow-md"
+                    style={{
+                        left: tooltip.x + 12,
+                        top: tooltip.y - 10,
+                        fontSize: 12,
+                        color: "#131b2e",
+                    }}
+                >
+                    <div className="font-medium">
+                        {STATUS_CONFIG[tooltip.source as ApplicationStatus]
+                            ?.label || tooltip.source}{" "}
+                        →{" "}
+                        {STATUS_CONFIG[tooltip.target as ApplicationStatus]
+                            ?.label || tooltip.target}
+                    </div>
+                    <div className="text-[#434655]">
+                        {tooltip.value} application
+                        {tooltip.value !== 1 ? "s" : ""}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

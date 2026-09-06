@@ -7,6 +7,7 @@ import {
     ALL_STATUSES,
     RoleCategory,
     ApplicationStatus,
+    StatusHistoryEntry,
     CATEGORY_CONFIG,
     STATUS_CONFIG,
     trimHistoryForCorrection,
@@ -141,19 +142,42 @@ export default function AddApplicationModal({
         };
 
         if (editingApplication) {
-            const statusChanged = editingApplication.status !== status
-            const history = editingApplication.status_history ?? []
+            const statusChanged = editingApplication.status !== status;
+            const history = editingApplication.status_history ?? [];
 
-            const newHistory = statusChanged
-              ? [
-                  ...trimHistoryForCorrection(history, status),
-                  {
-                    status,
-                    status_detail: statusDetail || null,
-                    changed_at: new Date().toISOString(),
-                  },
-                ]
-              : history
+            let newHistory: StatusHistoryEntry[] = history;
+            if (statusChanged) {
+                const trimmed = trimHistoryForCorrection(history, status);
+                const hasApplied = trimmed.some((entry) => entry.status === "applied");
+
+                const prepended: StatusHistoryEntry[] =
+                    status !== "saved" && status !== "applied" && !hasApplied
+                        ? [
+                              {
+                                  status: "applied",
+                                  status_detail: null,
+                                  changed_at: new Date().toISOString(),
+                              },
+                          ]
+                        : [];
+
+                const candidateHistory = [...prepended, ...trimmed];
+                const lastEntry = candidateHistory[candidateHistory.length - 1];
+
+                // Do not append if the last entry is already the exact same status
+                if (!lastEntry || lastEntry.status !== status) {
+                    newHistory = [
+                        ...candidateHistory,
+                        {
+                            status,
+                            status_detail: statusDetail || null,
+                            changed_at: new Date().toISOString(),
+                        },
+                    ];
+                } else {
+                    newHistory = candidateHistory;
+                }
+            }
 
             const { error } = await supabase
                 .from("applications")
@@ -162,13 +186,19 @@ export default function AddApplicationModal({
 
             if (error) console.error("Failed to update application:", error);
         } else {
-            const initialHistory = [
-                {
-                    status,
-                    status_detail: statusDetail || null,
+            const initialHistory: StatusHistoryEntry[] = [];
+            if (status !== "saved" && status !== "applied") {
+                initialHistory.push({
+                    status: "applied",
+                    status_detail: null,
                     changed_at: new Date().toISOString(),
-                },
-            ];
+                });
+            }
+            initialHistory.push({
+                status,
+                status_detail: statusDetail || null,
+                changed_at: new Date().toISOString(),
+            });
 
             const { error } = await supabase
                 .from("applications")
