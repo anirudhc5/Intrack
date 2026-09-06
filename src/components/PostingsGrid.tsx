@@ -74,9 +74,9 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
+    <div className="w-full flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-on-surface">Browse Postings</h1>
+        <h1 className="text-2xl font-semibold text-[#131b2e]">Browse Postings</h1>
         <p className="text-on-surface-variant text-sm">Discover new roles and add them to your tracker.</p>
       </div>
 

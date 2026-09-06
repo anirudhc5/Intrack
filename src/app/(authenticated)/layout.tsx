@@ -14,5 +14,11 @@ export default async function AuthenticatedLayout({
     redirect('/login');
   }
 
-  return <AppShell user={data.user}>{children}</AppShell>;
+  return (
+    <AppShell user={data.user}>
+      <div className="p-6 flex-1 flex flex-col min-h-0">
+        {children}
+      </div>
+    </AppShell>
+  );
 }

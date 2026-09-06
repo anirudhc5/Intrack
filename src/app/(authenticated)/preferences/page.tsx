@@ -19,13 +19,15 @@ export default async function PreferencesPage() {
   const postings = postingsRes.data || []
 
   return (
-    <div className="max-w-3xl mx-auto p-6 md:p-8">
-      <h1 className="text-[22px] font-semibold text-[#131b2e] mb-8">Preferences & Settings</h1>
-      <PreferencesForm 
-        preferences={preferences} 
-        postings={postings}
-        userId={user.id}
-      />
+    <div className="flex-1 overflow-y-auto space-y-6">
+      <h1 className="text-2xl font-semibold text-[#131b2e]">Preferences & Settings</h1>
+      <div className="max-w-3xl">
+        <PreferencesForm 
+          preferences={preferences} 
+          postings={postings}
+          userId={user.id}
+        />
+      </div>
     </div>
   )
 }

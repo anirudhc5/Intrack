@@ -15,7 +15,7 @@ export default async function TrackerPage() {
     .order('updated_at', { ascending: false })
 
   return (
-    <div className="h-[calc(100vh-4rem)] p-6">
+    <div className="h-[calc(100vh-4rem)]">
       <TrackerBoard applications={(applications || []) as Application[]} />
     </div>
   )

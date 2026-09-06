@@ -19,7 +19,7 @@ export default async function PostingsPage() {
     }
 
     return (
-        <div className="flex-1 w-full flex flex-col p-8">
+        <div className="flex-1 w-full flex flex-col">
             <PostingsGrid initialPostings={(postings as Posting[]) || []} />
         </div>
     );
