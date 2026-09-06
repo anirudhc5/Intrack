@@ -14,9 +14,9 @@ export default async function PreferencesPage() {
     supabase.from('postings').select('salary_text').not('salary_text', 'is', null)
   ])
 
-  // .single() returns error if 0 rows, so we handle it by defaulting to null
   const preferences = preferencesRes.error ? null : preferencesRes.data
   const postings = postingsRes.data || []
+  const notificationEmails: string[] = preferences?.notification_emails ?? []
 
   return (
     <div className="flex-1 overflow-y-auto space-y-6">
@@ -27,6 +27,7 @@ export default async function PreferencesPage() {
           postings={postings}
           userId={user.id}
           user={user}
+          notificationEmails={notificationEmails}
         />
       </div>
     </div>

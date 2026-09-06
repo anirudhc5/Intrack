@@ -76,6 +76,7 @@ export interface UserPreferences {
     categories: RoleCategory[];
     notify_email: boolean;
     weekly_goal: number;
+    notification_emails?: string[];
     // NOTE: no `min_salary`, `created_at`, or `updated_at` columns exist on
     // user_preferences per the schema — remove until/unless actually added
 }

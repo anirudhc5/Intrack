@@ -39,6 +39,7 @@ interface PreferencesFormProps {
     postings: { salary_text: string | null }[];
     userId: string;
     user?: SupabaseUser | null;
+    notificationEmails?: string[];
 }
 
 export default function PreferencesForm({
@@ -46,6 +47,7 @@ export default function PreferencesForm({
     postings,
     userId,
     user,
+    notificationEmails: initialNotificationEmails,
 }: PreferencesFormProps) {
     const router = useRouter();
     const supabase = createClient();
@@ -53,7 +55,7 @@ export default function PreferencesForm({
     // Profile Information state
     const [fullName, setFullName] = useState(user?.user_metadata?.name || "");
     const [notificationEmails, setNotificationEmails] = useState<string[]>(
-        user?.user_metadata?.notification_emails || [],
+        initialNotificationEmails ?? preferences?.notification_emails ?? [],
     );
     const [newEmailInput, setNewEmailInput] = useState("");
     const [emailError, setEmailError] = useState<string | null>(null);
@@ -116,7 +118,6 @@ export default function PreferencesForm({
             supabase.auth.updateUser({
                 data: {
                     name: fullName,
-                    notification_emails: notificationEmails,
                 },
             }),
             supabase.from("user_preferences").upsert(
@@ -125,6 +126,7 @@ export default function PreferencesForm({
                     categories,
                     notify_email: notifyEmail,
                     weekly_goal: weeklyGoal,
+                    notification_emails: notificationEmails,
                 },
                 { onConflict: "user_id" },
             ),
@@ -457,7 +459,7 @@ export default function PreferencesForm({
             </section>
 
             {/* Save Button */}
-            <div className="flex justify-end pt-2 pb-8">
+            <div className="flex justify-start pt-2 pb-8">
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
