@@ -45,7 +45,7 @@ export default function TrackerBoard({ applications }: { applications: Applicati
           <h1 className="text-2xl font-semibold text-[#131b2e]">My Applications</h1>
           <button
             onClick={() => { setEditingApp(undefined); setIsModalOpen(true) }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 font-medium transition-colors cursor-pointer"
           >
             <Plus size={18} /> Add Application
           </button>
@@ -66,7 +66,7 @@ export default function TrackerBoard({ applications }: { applications: Applicati
           <div className="flex gap-2 overflow-x-auto pb-2 -mb-2 no-scrollbar items-center">
             <button
               onClick={() => setSelectedCategory('All')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap border ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap border cursor-pointer ${
                 selectedCategory === 'All'
                   ? 'bg-slate-800 text-white border-slate-800'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -78,7 +78,7 @@ export default function TrackerBoard({ applications }: { applications: Applicati
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap border ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap border cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-slate-800 text-white border-slate-800'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'

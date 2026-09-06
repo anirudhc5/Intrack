@@ -86,7 +86,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={selectAll}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${
               selectedCategories.size === 0
                 ? 'bg-primary text-on-primary border-primary'
                 : 'bg-white text-[#434655] border-[#c3c6d7] hover:bg-slate-50'
@@ -101,7 +101,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
               <button
                 key={cat}
                 onClick={() => toggleCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${
                   isActive
                     ? `${config.bgColor} ${config.color} ${config.borderColor}`
                     : 'bg-white text-[#434655] border-[#c3c6d7] hover:bg-slate-50'
@@ -156,7 +156,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                     href={posting.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 text-outline hover:text-primary transition-colors shrink-0"
+                    className="p-1.5 text-outline hover:text-primary transition-colors shrink-0 cursor-pointer"
                     title="View Posting"
                   >
                     <ExternalLink className="w-4 h-4" />
@@ -201,7 +201,7 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
                     })
                     setIsModalOpen(true)
                   }}
-                  className="text-[#2563eb] bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 text-[12px] font-medium flex items-center gap-1 shrink-0 transition-colors"
+                  className="text-[#2563eb] bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 text-[12px] font-medium flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add to Tracker

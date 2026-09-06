@@ -223,7 +223,7 @@ export default function AddApplicationModal({
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors cursor-pointer"
                     >
                         <X size={20} />
                     </button>
@@ -319,7 +319,7 @@ export default function AddApplicationModal({
                                     <button
                                         key={cat}
                                         onClick={() => toggleCategory(cat)}
-                                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors cursor-pointer ${
                                             isSelected
                                                 ? `${config.bgColor} ${config.color} ${config.borderColor}`
                                                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -384,14 +384,14 @@ export default function AddApplicationModal({
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors"
+                        className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors cursor-pointer"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={!companyName || !roleTitle || loading}
-                        className="px-4 py-2 text-sm bg-[#2563eb] text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 text-sm bg-[#2563eb] text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
                     >
                         {loading ? "Saving..." : "Save Application"}
                     </button>

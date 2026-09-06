@@ -48,7 +48,7 @@ export default function ApplicationCard({ application, onEdit }: ApplicationCard
         <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
           <button 
             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-            className="p-1 rounded hover:bg-slate-100 text-slate-400 group-hover:text-slate-600"
+            className="p-1 rounded hover:bg-slate-100 text-slate-400 group-hover:text-slate-600 cursor-pointer"
           >
             <MoreHorizontal size={16} />
           </button>
@@ -62,13 +62,13 @@ export default function ApplicationCard({ application, onEdit }: ApplicationCard
               <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(application) }}
-                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                 >
                   <Edit size={14} /> Edit
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
-                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 text-red-600 flex items-center gap-2"
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 text-red-600 flex items-center gap-2 cursor-pointer"
                 >
                   <Trash2 size={14} /> Delete
                 </button>

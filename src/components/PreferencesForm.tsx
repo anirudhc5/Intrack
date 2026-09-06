@@ -241,7 +241,7 @@ export default function PreferencesForm({
                                 <button
                                     type="button"
                                     onClick={() => handleRemoveEmail(idx)}
-                                    className="p-1 text-[#737686] hover:text-[#ba1a1a] hover:bg-red-50 rounded transition-colors"
+                                    className="p-1 text-[#737686] hover:text-[#ba1a1a] hover:bg-red-50 rounded transition-colors cursor-pointer"
                                     title="Remove email"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -271,7 +271,7 @@ export default function PreferencesForm({
                                 <button
                                     type="button"
                                     onClick={handleAddEmail}
-                                    className="flex items-center gap-1.5 px-3.5 h-9 text-xs font-medium text-[#2563eb] bg-[#eff3ff] hover:bg-[#dbe4ff] rounded-lg transition-colors shrink-0"
+                                    className="flex items-center gap-1.5 px-3.5 h-9 text-xs font-medium text-[#2563eb] bg-[#eff3ff] hover:bg-[#dbe4ff] rounded-lg transition-colors shrink-0 cursor-pointer"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     Add Email
@@ -303,7 +303,7 @@ export default function PreferencesForm({
                             <button
                                 key={cat}
                                 onClick={() => toggleCategory(cat)}
-                                className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${
+                                className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors cursor-pointer ${
                                     isActive
                                         ? `${config.bgColor} ${config.color} ${config.borderColor}`
                                         : "bg-white text-[#434655] border-[#c3c6d7] hover:bg-[#f2f3ff]"
@@ -329,23 +329,25 @@ export default function PreferencesForm({
                     the target line in Pipeline Overview.
                 </p>
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-[#c3c6d7] rounded-lg overflow-hidden">
+                    <div className="inline-flex items-stretch border border-[#c3c6d7] rounded-lg overflow-hidden h-10">
                         <button
+                            type="button"
                             onClick={() =>
                                 setWeeklyGoal(Math.max(1, weeklyGoal - 1))
                             }
-                            className="px-3 py-2 text-[#434655] hover:bg-[#f2f3ff] transition-colors"
+                            className="w-10 h-full flex items-center justify-center text-[#434655] hover:bg-[#f2f3ff] transition-colors cursor-pointer"
                         >
                             <Minus className="w-4 h-4" />
                         </button>
-                        <span className="px-4 py-2 text-[15px] font-semibold text-[#131b2e] min-w-[3rem] text-center border-x border-[#c3c6d7]">
+                        <span className="px-4 flex items-center justify-center text-[15px] font-semibold text-[#131b2e] min-w-[3rem] text-center border-x border-[#c3c6d7] select-none">
                             {weeklyGoal}
                         </span>
                         <button
+                            type="button"
                             onClick={() =>
                                 setWeeklyGoal(Math.min(50, weeklyGoal + 1))
                             }
-                            className="px-3 py-2 text-[#434655] hover:bg-[#f2f3ff] transition-colors"
+                            className="w-10 h-full flex items-center justify-center text-[#434655] hover:bg-[#f2f3ff] transition-colors cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                         </button>
@@ -373,8 +375,9 @@ export default function PreferencesForm({
                 </p>
                 <div className="flex items-center gap-3">
                     <button
+                        type="button"
                         onClick={() => setNotifyEmail(!notifyEmail)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
                             notifyEmail ? "bg-[#2563eb]" : "bg-[#c3c6d7]"
                         }`}
                     >
@@ -463,7 +466,7 @@ export default function PreferencesForm({
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="flex items-center gap-2 bg-[#2563eb] text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-[#1d4ed8] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 bg-[#2563eb] text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-[#1d4ed8] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                     {isSaving ? (
                         <>

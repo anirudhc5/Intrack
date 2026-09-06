@@ -122,7 +122,7 @@ export default function Sidebar({ user }: { user: any }) {
                 </div>
                 <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium text-[#ba1a1a] hover:bg-[#f2f3ff] rounded-xl transition-colors"
+                    className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium text-[#ba1a1a] hover:bg-[#f2f3ff] rounded-xl transition-colors cursor-pointer"
                 >
                     <LogOut className="w-5 h-5" />
                     Sign Out
