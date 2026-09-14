@@ -21,7 +21,6 @@ import {
 import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
     Application,
-    StatusHistoryEntry,
     UserPreferences,
     STATUS_CONFIG,
     CATEGORY_CONFIG,
@@ -31,13 +30,11 @@ import {
 
 interface PipelineChartsProps {
     applications: Application[];
-    statusHistory: StatusHistoryEntry[];
     userPreferences: UserPreferences | null;
 }
 
 export function PipelineCharts({
     applications,
-    statusHistory,
 }: PipelineChartsProps) {
     // --- Summary Stats ---
     const totalApps = applications.length;
