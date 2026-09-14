@@ -281,17 +281,6 @@ export function formatStatusDisplay(
 }
 
 /**
- * Check if an application is "ghosted" (applied > 30 days ago with no update)
- */
-export function isGhosted(app: Application): boolean {
-    if (app.status !== "applied") return false;
-    const updatedAt = new Date(app.updated_at);
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return updatedAt < thirtyDaysAgo;
-}
-
-/**
  * Parse salary text to extract numeric value using regex
  */
 export function parseSalaryNumeric(salaryText: string | null): number | null {

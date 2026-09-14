@@ -2,6 +2,7 @@
 -- Intrack — current-state schema snapshot (public schema)
 -- =============================================================================
 -- Flattened from: supabase/migrations/20260913222025_remote_schema.sql
+-- Verified against the live DB catalog on 2026-09-13 (exact match).
 --                 (the only migration; pulled from the live project via
 --                 `supabase db pull` on 2026-09-13)
 --
@@ -40,8 +41,8 @@ end;
 $$;
 
 -- Event-trigger fn: auto-enables RLS on any new table created in `public`.
--- NOTE: the pulled dump contains no CREATE EVENT TRIGGER attaching this
--- function. Whether it is actually wired up is unverified (see STATUS.md).
+-- Attached via event trigger `ensure_rls` (see Event triggers below). The
+-- `db pull` dump omits it because event triggers are database-level objects.
 create or replace function public.rls_auto_enable() returns event_trigger
     language plpgsql security definer
     set search_path to 'pg_catalog'
@@ -164,6 +165,15 @@ create index idx_postings_posted_at   on public.postings     using btree (posted
 create or replace trigger trg_applications_updated_at
     before update on public.applications
     for each row execute function public.set_updated_at();
+
+
+-- ---------------------------------------------------------------------------
+-- Event triggers (NOT in the migration dump — confirmed on live DB via
+-- pg_event_trigger, 2026-09-13; Supabase-managed supabase_admin triggers omitted)
+-- ---------------------------------------------------------------------------
+create event trigger ensure_rls on ddl_command_end
+    when tag in ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
+    execute function public.rls_auto_enable();
 
 
 -- ---------------------------------------------------------------------------

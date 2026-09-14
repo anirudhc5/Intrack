@@ -46,21 +46,6 @@ export function PipelineCharts({
 }: PipelineChartsProps) {
     const weeklyGoal = userPreferences?.weekly_goal ?? 6;
 
-    // Check empty state
-    if (applications.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[50vh] bg-white rounded-xl shadow-sm border border-[#e2e8f0] p-8">
-                <BarChart3 className="w-12 h-12 text-[#c3c6d7] mb-4" />
-                <h2 className="text-[18px] font-semibold text-[#131b2e] mb-2">
-                    No applications yet
-                </h2>
-                <p className="text-[#434655] text-center max-w-sm">
-                    Add your first application to see pipeline analytics.
-                </p>
-            </div>
-        );
-    }
-
     // --- Summary Stats ---
     const totalApps = applications.length;
 
@@ -279,6 +264,21 @@ export function PipelineCharts({
             }))
             .sort((a, b) => b.value - a.value);
     }, [applications]);
+
+    // Check empty state
+    if (applications.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[50vh] bg-white rounded-xl shadow-sm border border-[#e2e8f0] p-8">
+                <BarChart3 className="w-12 h-12 text-[#c3c6d7] mb-4" />
+                <h2 className="text-[18px] font-semibold text-[#131b2e] mb-2">
+                    No applications yet
+                </h2>
+                <p className="text-[#434655] text-center max-w-sm">
+                    Add your first application to see pipeline analytics.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
