@@ -87,6 +87,23 @@
     --radius-lg: 0.5rem;
     --radius-xl: 0.75rem;
     --radius-2xl: 1rem;
+
+    /* === Shadows ===
+       Soft/diffuse instead of Tailwind's default tight-blur shadows: a small
+       blur radius traces the element's rounded corners almost exactly, which
+       reads as a hard duplicate outline rather than a natural cast shadow.
+       These widen the blur a lot while keeping the y-offset within a few
+       pixels and opacity low, so elevation stays subtle and the shadow's own
+       corner shape stops being the thing you notice. Overriding the scale
+       here (rather than per component) means every existing `shadow-sm` /
+       `shadow-md` / etc. class picks it up automatically. */
+    --shadow-2xs: 0 1px 4px 0 rgb(0 0 0 / 0.04);
+    --shadow-xs: 0 1px 6px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 2px 10px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.04);
+    --shadow-md: 0 3px 16px 0 rgb(0 0 0 / 0.08), 0 1px 4px 0 rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 4px 24px 0 rgb(0 0 0 / 0.10), 0 2px 6px 0 rgb(0 0 0 / 0.05);
+    --shadow-xl: 0 6px 32px 0 rgb(0 0 0 / 0.12), 0 2px 8px 0 rgb(0 0 0 / 0.06);
+    --shadow-2xl: 0 8px 40px 0 rgb(0 0 0 / 0.16), 0 3px 10px 0 rgb(0 0 0 / 0.08);
 }
 
 /* === Base Styles === */

@@ -3,15 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { Search, Globe, ExternalLink, Plus, Briefcase } from 'lucide-react'
 import { Posting, ALL_CATEGORIES, CATEGORY_CONFIG, RoleCategory } from '@/lib/types'
-
-// Conditionally importing AddApplicationModal in case it isn't created yet.
-let AddApplicationModal: React.ElementType = () => null
-try {
-  // Try to require it conditionally
-  AddApplicationModal = require('./AddApplicationModal').default || require('./AddApplicationModal')
-} catch (e) {
-  // Fallback if not available
-}
+import AddApplicationModal from './AddApplicationModal'
 
 interface PostingsGridProps {
   initialPostings: Posting[]
@@ -226,22 +218,20 @@ export default function PostingsGrid({ initialPostings }: PostingsGridProps) {
         </div>
       )}
 
-      {/* Add Application Modal (if available) */}
-      {AddApplicationModal && (
-        <AddApplicationModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setPrefillPosting(null)
-          }}
-          onSaved={() => {
-            setIsModalOpen(false)
-            setPrefillPosting(null)
-            // Ideally we'd redirect to tracker or show success toast here
-          }}
-          prefillFromPosting={prefillPosting}
-        />
-      )}
+      <AddApplicationModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setPrefillPosting(null)
+        }}
+        onSaved={() => {
+          setIsModalOpen(false)
+          setPrefillPosting(null)
+          // Ideally we'd redirect to tracker or show success toast here
+        }}
+        prefillFromPosting={prefillPosting}
+      />
+
     </div>
   )
 }
