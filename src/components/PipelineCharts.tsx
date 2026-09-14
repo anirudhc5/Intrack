@@ -6,17 +6,13 @@ import React, {
     useEffect,
     useState,
     useCallback,
+    useSyncExternalStore,
 } from "react";
 import { sankeyCircular, sankeyLeft } from "d3-sankey-circular";
 import type { SankeyGraph, SankeyNode, SankeyLink } from "d3-sankey-circular";
 import {
-    XAxis,
-    YAxis,
-    CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    LineChart,
-    Line,
     Legend,
     PieChart,
     Pie,
@@ -42,10 +38,7 @@ interface PipelineChartsProps {
 export function PipelineCharts({
     applications,
     statusHistory,
-    userPreferences,
 }: PipelineChartsProps) {
-    const weeklyGoal = userPreferences?.weekly_goal ?? 6;
-
     // --- Summary Stats ---
     const totalApps = applications.length;
 
@@ -175,78 +168,6 @@ export function PipelineCharts({
         Other: "#334155", // slate-700
     };
 
-    // --- Velocity Over Time ---
-    // --- Velocity Over Time ---
-    const velocityData = useMemo(() => {
-        const data = [];
-        const now = new Date();
-
-        const monthNames = [
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-        ];
-
-        for (let i = 7; i >= 0; i--) {
-            // End boundary of this 7-day bucket
-            const windowEnd = new Date(now);
-            windowEnd.setDate(now.getDate() - i * 7);
-            windowEnd.setHours(23, 59, 59, 999);
-
-            // Start boundary of this 7-day bucket
-            const windowStart = new Date(windowEnd);
-            windowStart.setDate(windowEnd.getDate() - 7);
-            windowStart.setHours(0, 0, 0, 0);
-
-            // Label reflects the end date so the latest tick lands on Today
-            const isCurrentWeek = i === 0;
-            const weekLabel = isCurrentWeek
-                ? "Today"
-                : `${monthNames[windowEnd.getMonth()]} ${windowEnd.getDate()}`;
-
-            const count = applications.filter((app) => {
-                // 1. Fall back to status_history or created_at if applied_at is missing
-                const dateStr =
-                    app.applied_at ||
-                    app.status_history?.find((h) => h.status === "applied")
-                        ?.changed_at ||
-                    (app as any).created_at;
-
-                if (!dateStr) return false;
-
-                // 2. Parse date safely regardless of format (YYYY-MM-DD vs ISO timestamp)
-                let appliedDate: Date;
-                if (
-                    typeof dateStr === "string" &&
-                    /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
-                ) {
-                    const [y, m, d] = dateStr.split("-").map(Number);
-                    appliedDate = new Date(y, m - 1, d, 12, 0, 0); // Noon local time to avoid boundary issues
-                } else {
-                    appliedDate = new Date(dateStr);
-                }
-
-                return appliedDate >= windowStart && appliedDate <= windowEnd;
-            }).length;
-
-            data.push({
-                week: weekLabel,
-                actual: count,
-                target: weeklyGoal,
-            });
-        }
-        return data;
-    }, [applications, weeklyGoal]);
-
     // --- Category Distribution ---
     const categoryData = useMemo(() => {
         const counts: Partial<Record<RoleCategory, number>> = {};
@@ -343,66 +264,13 @@ export function PipelineCharts({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Velocity Chart */}
+                {/* Activity Heatmap */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e2e8f0]">
                     <h3 className="text-[16px] font-medium text-[#131b2e] mb-6">
-                        Activity Over Time
+                        Application Activity
                     </h3>
                     <div className="h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                                data={velocityData}
-                                margin={{
-                                    top: 5,
-                                    right: 20,
-                                    left: 0,
-                                    bottom: 5,
-                                }}
-                            >
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#f2f3ff"
-                                />
-                                <XAxis
-                                    dataKey="week"
-                                    tick={{ fill: "#434655", fontSize: 12 }}
-                                />
-                                <YAxis
-                                    tick={{ fill: "#434655", fontSize: 12 }}
-                                />
-                                <Tooltip
-                                    contentStyle={{
-                                        borderRadius: "8px",
-                                        border: "1px solid #e2e8f0",
-                                        fontSize: "12px",
-                                    }}
-                                />
-                                <Legend
-                                    wrapperStyle={{
-                                        fontSize: "12px",
-                                        color: "#434655",
-                                    }}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="actual"
-                                    name="Applications"
-                                    stroke="#2563eb"
-                                    strokeWidth={2}
-                                    dot={{ r: 4 }}
-                                    activeDot={{ r: 6 }}
-                                />
-                                <Line
-                                    type="step"
-                                    dataKey="target"
-                                    name="Weekly Goal"
-                                    stroke="#94a3b8"
-                                    strokeWidth={2}
-                                    strokeDasharray="5 5"
-                                    dot={false}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <ActivityHeatmap applications={applications} />
                     </div>
                 </div>
 
@@ -455,6 +323,236 @@ export function PipelineCharts({
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// --- Activity Heatmap Sub-component ---
+
+const HEATMAP_WEEKS = 12;
+const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+// Level 0 = no applications (gray); 1-4 = light -> dark blue ordinal ramp
+const HEATMAP_LEVEL_CLASSES = [
+    "bg-[#ebedf0]",
+    "bg-[#60a5fa]",
+    "bg-[#3b82f6]",
+    "bg-[#1d4ed8]",
+    "bg-[#1e3a8a]",
+];
+const HEATMAP_CELL_SIZE = "w-4 h-4 lg:w-5 lg:h-5";
+
+const subscribeNoop = () => () => {};
+
+function toDayKey(date: Date): string {
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function heatmapLevel(count: number, max: number): number {
+    if (count === 0) return 0;
+    if (max <= 4) return count;
+    return Math.ceil((count / max) * 4);
+}
+
+function ActivityHeatmap({ applications }: { applications: Application[] }) {
+    // Dates are bucketed by the viewer's local day, so only build the grid on
+    // the client — the server (UTC) would disagree near midnight.
+    const isClient = useSyncExternalStore(
+        subscribeNoop,
+        () => true,
+        () => false,
+    );
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [tooltip, setTooltip] = useState<{
+        x: number;
+        y: number;
+        label: string;
+        count: number;
+    } | null>(null);
+
+    const heatmap = useMemo(() => {
+        if (!isClient) return null;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const start = new Date(today);
+        start.setDate(
+            today.getDate() - today.getDay() - (HEATMAP_WEEKS - 1) * 7,
+        );
+
+        // Activity date: the 'applied' status_history entry, else created_at
+        const counts = new Map<string, number>();
+        applications.forEach((app) => {
+            const raw =
+                app.status_history?.find((h) => h.status === "applied")
+                    ?.changed_at ?? app.created_at;
+            if (!raw) return;
+            const date = new Date(raw);
+            if (Number.isNaN(date.getTime()) || date < start) return;
+            const key = toDayKey(date);
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        });
+
+        const days = Array.from({ length: HEATMAP_WEEKS * 7 }, (_, i) => {
+            const date = new Date(start);
+            date.setDate(start.getDate() + i);
+            const isFuture = date > today;
+            return {
+                date,
+                isFuture,
+                count: isFuture ? 0 : (counts.get(toDayKey(date)) ?? 0),
+            };
+        });
+
+        const max = Math.max(0, ...days.map((d) => d.count));
+        const total = days.reduce((sum, d) => sum + d.count, 0);
+
+        const monthLabels = Array.from({ length: HEATMAP_WEEKS }, (_, w) => {
+            const month = days[w * 7].date.getMonth();
+            const isNewMonth =
+                w === 0
+                    ? days[7].date.getMonth() === month
+                    : days[(w - 1) * 7].date.getMonth() !== month;
+            return isNewMonth
+                ? days[w * 7].date.toLocaleDateString("en-US", {
+                      month: "short",
+                  })
+                : "";
+        });
+
+        return { days, max, total, monthLabels };
+    }, [applications, isClient]);
+
+    const showTooltip = (e: React.MouseEvent, label: string, count: number) => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        setTooltip({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            label,
+            count,
+        });
+    };
+
+    const cells = heatmap
+        ? heatmap.days
+        : Array.from({ length: HEATMAP_WEEKS * 7 }, () => null);
+
+    return (
+        <div
+            ref={containerRef}
+            className="relative h-full flex flex-col items-center justify-center"
+        >
+            <div className="flex gap-2">
+                {/* Day labels */}
+                <div className="grid grid-rows-7 gap-1 pt-[18px]">
+                    {DAY_LABELS.map((label, i) => (
+                        <span
+                            key={i}
+                            className="h-4 lg:h-5 flex items-center text-[10px] text-[#737686]"
+                        >
+                            {label}
+                        </span>
+                    ))}
+                </div>
+
+                <div>
+                    {/* Month labels */}
+                    <div className="flex gap-1 h-[14px] mb-1">
+                        {Array.from({ length: HEATMAP_WEEKS }, (_, w) => (
+                            <span
+                                key={w}
+                                className="w-4 lg:w-5 text-[10px] leading-[14px] text-[#737686] whitespace-nowrap"
+                            >
+                                {heatmap?.monthLabels[w]}
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Day cells: columns = weeks, rows = Sun-Sat */}
+                    <div className="grid grid-flow-col grid-rows-7 gap-1">
+                        {cells.map((day, i) => {
+                            if (!day) {
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`${HEATMAP_CELL_SIZE} rounded-[3px] ${HEATMAP_LEVEL_CLASSES[0]}`}
+                                    />
+                                );
+                            }
+                            if (day.isFuture) {
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`${HEATMAP_CELL_SIZE} invisible`}
+                                    />
+                                );
+                            }
+                            const label = day.date.toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                            });
+                            const level = heatmapLevel(day.count, heatmap!.max);
+                            return (
+                                <div
+                                    key={i}
+                                    role="img"
+                                    aria-label={`${label}: ${day.count} application${day.count !== 1 ? "s" : ""}`}
+                                    className={`${HEATMAP_CELL_SIZE} rounded-[3px] ${HEATMAP_LEVEL_CLASSES[level]}`}
+                                    onMouseEnter={(e) =>
+                                        showTooltip(e, label, day.count)
+                                    }
+                                    onMouseMove={(e) =>
+                                        showTooltip(e, label, day.count)
+                                    }
+                                    onMouseLeave={() => setTooltip(null)}
+                                />
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Summary + scale legend */}
+            <div className="mt-10 w-full flex items-center justify-between gap-4 text-[11px] text-[#737686]">
+                <span>
+                    {heatmap
+                        ? `${heatmap.total} application${heatmap.total !== 1 ? "s" : ""} in the last ${HEATMAP_WEEKS} weeks`
+                        : ""}
+                </span>
+                <div className="flex items-center gap-1">
+                    <span className="mr-1">Less</span>
+                    {HEATMAP_LEVEL_CLASSES.map((cls) => (
+                        <span
+                            key={cls}
+                            className={`w-3 h-3 rounded-[2px] ${cls}`}
+                        />
+                    ))}
+                    <span className="ml-1">More</span>
+                </div>
+            </div>
+
+            {/* Tooltip */}
+            {tooltip && (
+                <div
+                    className="absolute pointer-events-none z-10 bg-white border border-[#e2e8f0] rounded-lg px-3 py-2 shadow-md whitespace-nowrap"
+                    style={{
+                        left: tooltip.x,
+                        top: tooltip.y,
+                        transform: "translate(-50%, calc(-100% - 10px))",
+                        fontSize: 12,
+                        color: "#131b2e",
+                    }}
+                >
+                    <div className="font-medium">{tooltip.label}</div>
+                    <div className="text-[#434655]">
+                        {tooltip.count === 0
+                            ? "No applications"
+                            : `${tooltip.count} application${tooltip.count !== 1 ? "s" : ""}`}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -12,7 +12,7 @@ Items marked **awaiting** are still waiting on a decision.
 | ID | Case | Where | Finding | Decision |
 |---|---|---|---|---|
 | M1 | **(a)** code references something not in schema | `src/app/(authenticated)/pipeline/page.tsx:8` | `supabase.from('status_history')` queries a **table that doesn't exist**. `status_history` is a jsonb column on `applications`. The query fails silently and returns `[]`. It's passed to `PipelineCharts` as the `statusHistory` prop (`PipelineCharts.tsx:38,44`), which the component never uses. | awaiting |
-| M2 | **(b)** schema column read but never written | `src/components/PipelineCharts.tsx:76,83,219` | `applications.applied_at` is read, but no insert or update sets it (the `AddApplicationModal` payload leaves it out), so it's always null. The response-rate "vs last mo" badge can never render (0 vs 0), and the activity chart falls back to `status_history` / `created_at`. | awaiting |
+| M2 | **(b)** schema column read but never written | `src/components/PipelineCharts.tsx:69,76` | `applications.applied_at` is NULL on all 16 live rows because nothing writes it. The heatmap that replaced the line chart doesn't read it. The only remaining read is the "vs last mo" response-rate badge (`PipelineCharts.tsx`, `appsThisMonth`/`appsLastMonth`), which can therefore never render. The Application Activity heatmap uses the `status_history` 'applied' entry, falling back to `created_at`. | awaiting |
 | M3 | **(b)** schema column unused | `src/app/(authenticated)/postings/page.tsx:15` | `postings.posted_at` is unused and has a dedicated desc index, but the page orders by `first_seen_at`. | awaiting |
 | M4 | **(b)** schema column unused | Postings UI / prefill | `postings.jd_text` is never shown or passed into the Add Application prefill. | awaiting |
 
@@ -27,7 +27,6 @@ Greps turned up no other (a)-type references. There are no `company_name`, `role
 - `RoleCategory` (8 values) has no DB check constraint. `categories` is plain `text[]` on all 3 tables, so only code enforces the taxonomy.
 - `StatusHistoryEntry` shape is code-only; the jsonb column is unconstrained.
 - The header comment points to a nonexistent `intrack-schema.sql`; it should point to `docs/SCHEMA.sql`.
-- `PipelineCharts.tsx:222` has an unnecessary `(app as any).created_at` cast.
 
 ## Verified OK
 
@@ -55,9 +54,13 @@ Greps turned up no other (a)-type references. There are no `company_name`, `role
 
 - `postings.source`, `external_id`, `canonical_id`, and `raw` exist for aggregator ingestion, which hasn't been built yet.
 
+## Open: product/copy
+
+- **`weekly_goal` is no longer displayed anywhere.** The Pipeline "Activity Over Time" line chart (Applications vs Weekly Goal) was replaced by the Application Activity heatmap, which has no goal comparison. `PreferencesForm.tsx:328` still says the goal "appears as the target line in Pipeline Overview", and the setting is still saved. Left as-is by decision; awaiting a follow-up.
+
 ## Incidental issues (outside the schema audit)
 
-- ~~**Rules-of-Hooks violation.**~~ **Resolved.** The empty-state early return in `PipelineCharts` now sits after all 3 `useMemo` calls (`:120,180,251` → return at `:269`). The diff is a pure 15-line move, and `npx next build` passes.
+- ~~**Rules-of-Hooks violation.**~~ **Resolved.** The empty-state early return in `PipelineCharts` now sits after all 3 `useMemo` calls. The diff is a pure 15-line move, and `npx next build` passes.
 - **Same Sankey color for all interview stages.** `STATUS_COLORS` (`PipelineCharts.tsx:111-113`) gives all 3 stages `#2563eb`, even though `STATUS_CONFIG.dotColor` uses blue-500/600/700. This is cosmetic.
 
 ### Classified by schema-guardian (2026-09-13)
